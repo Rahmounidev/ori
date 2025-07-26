@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,7 +13,10 @@ import Image from "next/image"
 import Footer from "@/components/footer"
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
@@ -28,16 +30,71 @@ export default function LoginPage() {
     confirmPassword: "",
   })
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Logique de connexion
-    console.log("Login:", loginData)
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/')
+      } else {
+        setError(data.message || 'Erreur lors de la connexion')
+      }
+    } catch (error) {
+      setError('Erreur de connexion')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Logique d'inscription
-    console.log("Register:", registerData)
+    setIsLoading(true)
+    setError("")
+
+    if (registerData.password !== registerData.confirmPassword) {
+      setError("Les mots de passe ne correspondent pas")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: registerData.email,
+          password: registerData.password,
+          name: `${registerData.firstName} ${registerData.lastName}`,
+          phone: registerData.phone,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/')
+      } else {
+        setError(data.message || 'Erreur lors de l\'inscription')
+      }
+    } catch (error) {
+      setError('Erreur de connexion')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -64,6 +121,11 @@ export default function LoginPage() {
               </CardHeader>
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4">
+                  {error && (
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
+                      {error}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -99,8 +161,8 @@ export default function LoginPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4">
-                  <Button type="submit" className="w-full">
-                    Se connecter
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Connexion..." : "Se connecter"}
                   </Button>
                   <Link href="/forgot-password" className="text-sm text-orange-600 hover:underline">
                     Mot de passe oublié ?
@@ -118,6 +180,11 @@ export default function LoginPage() {
               </CardHeader>
               <form onSubmit={handleRegister}>
                 <CardContent className="space-y-4">
+                  {error && (
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
+                      {error}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Prénom</Label>
@@ -186,8 +253,8 @@ export default function LoginPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full">
-                    S'inscrire
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Inscription..." : "S'inscrire"}
                   </Button>
                 </CardFooter>
               </form>
